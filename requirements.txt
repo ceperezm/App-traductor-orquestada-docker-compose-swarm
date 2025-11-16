@@ -1,0 +1,6 @@
+# Core dependencies
+gradio>=4.44.0
+openai>=1.54.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+mlflow>=2.14.0
