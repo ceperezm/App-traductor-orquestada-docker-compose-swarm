@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Servicio MLflow Server
+  mlflow-server:
+    image: ghcr.io/mlflow/mlflow:v2.10.0
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-db-data:/mlflow/mlruns
+      - mlflow-artifacts-data:/mlflow/mlartifacts
+    networks:
+      - traductor-net
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri file:///mlflow/mlruns
+      --default-artifact-root file:///mlflow/mlartifacts
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager  # Solo en nodos manager 
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+
+  # Servicio App de Traducción
+  app-traductor:
+    image: ceperezm/traductor-genai:1.0.0  # ← imagen
+    ports:
+      - "7860:7860"
+    volumes:
+      - mlflow-db-data:/app/mlruns
+      - mlflow-artifacts-data:/app/mlartifacts
+    environment:
+      - OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+    networks:
+      - traductor-net
+    deploy:
+      replicas: 2  # ← 2 RÉPLICAS INICIALES
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+
+# Red overlay para Swarm
+networks:
+  traductor-net:
+    driver: overlay
+    attachable: true
+
+# Volúmenes
+volumes:
+  mlflow-db-data:
+    driver: local
+  mlflow-artifacts-data:
+    driver: local

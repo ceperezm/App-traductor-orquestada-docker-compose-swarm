@@ -13,4 +13,4 @@ COPY chatbotgradio.py .
 EXPOSE 7860
 
 # Comando para ejecutar la app
-CMD ["python", "chatbotgradio.py"]
+CMD ["sh", "-c", "sleep 10 && python chatbotgradio.py"]
