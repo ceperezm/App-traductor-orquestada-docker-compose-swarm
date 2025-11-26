@@ -83,8 +83,44 @@ docker service scale traductor_stack_app-traductor=3
 🔧 **Componentes técnicos**
 
 ### Servicios Docker
-- **app-traductor**: Aplicación Gradio (puerto 7860)
-- **mlflow-server**: Servidor MLflow (puerto 5000)
+- **app-traductor**: Aplicación Gradio con lógica de traducción integrada (puerto 7860)
+- **mlflow-server**: Servidor MLflow para tracking de experimentos (puerto 5000)
+
+### Arquitectura General
+El proyecto utiliza una arquitectura basada en microservicios ejecutados en contenedores Docker. Los servicios principales son:
+- **app-traductor**: Aplicación Gradio que incluye la interfaz web y la lógica de traducción (expuesto en puerto 7860)
+- **mlflow-server**: Servidor MLflow para registro y monitoreo de experimentos (expuesto en puerto 5000)
+
+En Docker Compose, los servicios comparten una red bridge y usan volúmenes locales. En Swarm, los servicios se ejecutan como réplicas dentro de una red overlay distribuida.
+
+### Diferencias entre docker-compose.yml y docker-stack.yml
+- **Compose**: Permite build directo desde Dockerfile, orientado a desarrollo local
+- **Swarm**: Requiere imagen ya publicada (directiva `image` en lugar de `build`)
+- **Deploy**: Swarm utiliza sección `deploy` para configurar réplicas, reinicios y restricciones
+- **Redes**: Compose usa `bridge`, Swarm usa `overlay` para comunicación multi-nodo
+- **Volúmenes**: En Swarm deben manejarse mediante drivers distribuidos o declaración externa
+
+### Comandos Principales
+```bash
+# Desarrollo local
+docker-compose up -d                    # Levanta servicios locales
+docker-compose build                   # Construye imágenes de desarrollo
+
+# Producción Swarm
+docker swarm init                      # Inicializa cluster Swarm
+docker stack deploy -c docker-stack.yml traductor_stack  # Despliega aplicación
+docker service ls                       # Lista servicios en ejecución
+docker service scale traductor_stack_app-traductor=3   # Escala réplicas
+docker push usuario/traductor-genai:1.0.0   # Publica imagen en Docker Hub
+docker pull usuario/traductor-genai:1.0.0   # Descarga imagen desde Docker Hub
+```
+
+### Observaciones sobre Rendimiento
+La latencia del servicio depende de la carga del cluster y del modelo de traducción utilizado:
+- **Entorno local (Compose)**: Latencia baja sin red distribuida
+- **Entorno Swarm**: Latencia ligeramente mayor debido al enrutamiento interno entre nodos
+- **Calidad de traducción**: Resultados consistentes para textos cortos y medianos
+- **Escalabilidad**: Desempeño estable al escalar réplicas del servicio
 
 ### Modelos de IA disponibles
 - Google: gemma-3-27b-it, gemini-2.0-flash-exp
